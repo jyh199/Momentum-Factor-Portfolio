@@ -1,8 +1,61 @@
+import wrds
+import pandas_datareader
 import datetime as dt
 import pandas as pd
 import numpy as np
+from decimal import Decimal
 import matplotlib.pyplot as plt
 from pandas.tseries.offsets import MonthEnd
+
+# Collect CRSP data from WRDS
+
+# WRDS login information
+data_folder = 'D:/MY/UCLA/Academic/2022 spring/QAM/data/'  
+id_wrds = 'jessie_jyh'  
+
+# Share codes and exchage code that we'll use
+min_shrcd = 10
+max_shrcd = 11
+possible_exchcd = (1, 2, 3)
+
+# Time period
+min_year = 1925 # becasue we use lagged ME, so I also loaded the data in 1925
+max_year = 2021
+
+# Load CRSP returns
+conn = wrds.Connection(wrds_username=id_wrds)
+crsp_raw = conn.raw_sql("""
+                      select a.permno, a.permco, a.date, a.ret, a.retx, a.shrout, 
+                      a.prc, a.cfacshr, a.cfacpr, b.shrcd, b.exchcd
+                      from crspq.msf as a
+                      left join crspq.msenames as b
+                      on a.permno=b.permno
+                      and b.namedt<=a.date
+                      and a.date<=b.nameendt
+                      where b.shrcd between """ + str(min_shrcd) + """ and  """ + str(max_shrcd) + """
+                      and a.date between '01/01/""" +str(min_year)+ """' and '12/31/""" +str(max_year)+ """'
+                      and b.exchcd in """ + str(possible_exchcd) + """
+                      """)
+
+# Load delisting returns
+dlret_raw = conn.raw_sql("""
+                      select permno, dlstdt, dlret, dlstcd
+                      from crspq.msedelist
+                       """)
+
+conn.close()
+
+# Load Fama-French 3 factors data
+
+pd.set_option('precision', 4)
+FF3 = pandas_datareader.famafrench.FamaFrenchReader('F-F_Research_Data_Factors', start = '1926', end = '2022')
+FF3 = FF3.read()[0]/100
+FF3.columns = 'MktRF','SMB','HML','RF'
+
+# save csv files
+crsp_raw.to_csv(data_folder + 'crsp_raw.csv')
+dlret_raw.to_csv(data_folder + 'dlret_raw.csv')
+FF3.to_csv(data_folder + 'FF3.csv')
 
 # Data cleaning
 
