@@ -1,14 +1,12 @@
-import os
 import datetime as dt
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from pandas.tseries.offsets import MonthEnd
 
-# Question 1
+# Data cleaning
 
 # read csv files
-os.chdir("D:/MY/UCLA/Academic/2022 spring/QAM/data/")
 crsp_raw = pd.read_csv('crsp_raw.csv')
 dlret_raw = pd.read_csv('dlret_raw.csv')
 
@@ -62,7 +60,7 @@ crsp_stock_mom = crsp_stock_mom[['Year','Month', 'permno',
 crsp_stock_mom = crsp_stock_mom[(crsp_stock_mom.Year < 2022) &
                                 (crsp_stock_mom.Year > 1926)]
 
-# Question 2
+# Define the monthly momentum portfolio decile of each stock as defined by both Daniel and Moskowitz and Kenneth R. French
 
 # Daniel and Moskowitz deciles
 stock_dec = crsp_stock_mom.copy()
@@ -90,7 +88,7 @@ for y in range(1927,2022):
 crsp_stock_dec = stock_dec[['Year','Month', 'permno', 'lag_Mkt_Cap',
                             'Ret', 'DM_decile', 'KRF_decile']]
 
-# Question 3
+# Calculate the monthly momentum portfolio decile returns
 
 # load and clean FF3 data
 FF_mkt = pd.read_csv('FF3.csv')
@@ -120,7 +118,7 @@ crsp_mom_ret = crsp_mom_ret.merge(vwret_krf, how='inner', on=['Year', 'Month', '
 crsp_mom_ret = crsp_mom_ret.merge(FF_mkt[['Year','Month','RF']], 
                                   how='inner', on=['Year', 'Month'])
 
-# Question 4
+# Calculate statistics of each decile portfolio
 
 # 192701-201303
 mom_ret_q4 = crsp_mom_ret[crsp_mom_ret.Year < 2014]
@@ -129,11 +127,9 @@ mom_ret_q4 = mom_ret_q4.drop(mom_ret_q4[(mom_ret_q4.Year==2013) & (mom_ret_q4.Mo
 # excess returns and log returns
 mom_ret_q4['DM_exret'] = mom_ret_q4['DM_ret'] - mom_ret_q4['RF']
 mom_ret_q4['DM_logret'] = np.log(mom_ret_q4['DM_ret'] + 1)
-
 Q4 = pd.DataFrame(columns = ['Ave(r-rf)','sigma','SR','sk(m)'])
 
 # decile portfolios
-
 # mean annualized excess ret (%)
 exret_mean = mom_ret_q4.groupby('decile')['DM_exret'].mean() * 1200
 Q4['Ave(r-rf)'] = exret_mean
@@ -148,7 +144,6 @@ Q4['SR'] = Q4['Ave(r-rf)'] / Q4['sigma']
 # skewness
 skew = mom_ret_q4.groupby('decile')['DM_logret'].skew()
 Q4['sk(m)'] = skew
-
 Q4 = Q4.T
 
 # WML
@@ -173,7 +168,7 @@ Q4.columns = 'Decile 1', 'Decile 2', 'Decile 3',\
              'Decile 7', 'Decile 8', 'Decile 9',\
              'Decile 10', 'WML'
              
-# Question 5
+# Correlation between my portfolio returns and the data from the website 
 
 # load and clean DM returns (192701-201612)
 DM_data = pd.read_fwf('m_m_pt_tot.txt', header=None)
@@ -232,52 +227,4 @@ corr.columns = 'Decile 1', 'Decile 2', 'Decile 3',\
                'Decile 4', 'Decile 5', 'Decile 6' ,\
                'Decile 7', 'Decile 8', 'Decile 9',\
                'Decile 10', 'WML'
-
-# Question 6
-
-# plot the figure of returns after 2011
-mom_ret_2012 = crsp_mom_ret[crsp_mom_ret.Year > 2011]
-date_1221 = KRF_data[KRF_data['date'].dt.year > 2011]['date']
-
-# DM
-plt.figure()
-for i in range(1,11):
-    decile = mom_ret_2012[mom_ret_2012.decile == i]
-    decile_logret = np.log(decile['DM_ret'] + 1)
-    decile_cumret = decile_logret.cumsum()
-    plt.plot(date_1221, decile_cumret, label=str(i))
-plt.legend()
-plt.show()
-
-# KRF
-plt.figure()
-for i in range(1,11):
-    decile = mom_ret_2012[mom_ret_2012.decile == i]
-    decile_logret = np.log(decile['KRF_ret'] + 1)
-    decile_cumret = decile_logret.cumsum()
-    plt.plot(date_1221, decile_cumret, label=str(i))
-plt.legend()
-plt.show()
-
-# WML
-plt.figure()
-wml_ret_dm = (mom_ret_2012[mom_ret_2012.decile == 10]['DM_ret'].values -
-              mom_ret_2012[mom_ret_2012.decile == 1]['DM_ret'].values)
-wml_ret_krf = (mom_ret_2012[mom_ret_2012.decile == 10]['KRF_ret'].values -
-               mom_ret_2012[mom_ret_2012.decile == 1]['KRF_ret'].values)
-plt.plot(date_1221, np.log(wml_ret_dm+1).cumsum(), label='DM WML')
-plt.plot(date_1221, np.log(wml_ret_krf+1).cumsum(), label='KRF WML')
-plt.legend()
-plt.show()
-
-
-
-
-
-
-
-
-
-
-
 
